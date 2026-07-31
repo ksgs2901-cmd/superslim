@@ -3,17 +3,20 @@
    Prende o botão "voltar" / gesto de swipe-back.
 
    Pareamento FIXO (cada upsell tem o SEU downsell) — SEM bagunça:
-     - FRONT (9.html):            voltar → /downsell/front.html
-     - UPSELL  /upN/:             voltar → /downsell/upN.html   (o downsell DAQUELE upsell)
-     - DOWNSELL /downsell/*.html: voltar → NÃO vai pra lugar nenhum (fica no downsell)
+     - FRONT (/9/):               voltar → /downsell/front/index.html
+     - UPSELL  /upN/:             voltar → /downsell/upN/index.html  (o downsell DAQUELE upsell)
+     - DOWNSELL /downsell/*:      voltar → NÃO vai pra lugar nenhum (fica no downsell)
 
    O downsell é o FIM DA LINHA do "voltar": nunca empurra pra outros upsells.
    Cada upsell manda só pro seu próprio downsell, e o downsell não redireciona.
 
-   Inclua no FINAL de cada página, antes de </body>:
-     - Raiz (9.html):         <script src="js/back-redirect.js?v=4"></script>
-     - Upsell (/upN/):        <script src="../js/back-redirect.js?v=4"></script>
-     - Downsell (/downsell/): <script src="../js/back-redirect.js?v=4"></script>
+   Os destinos são caminhos ABSOLUTOS (começam com "/"), então funcionam
+   igual de qualquer profundidade de pasta. Não use caminhos relativos aqui:
+   de /9/index.html um "downsell/front/index.html" vira /9/downsell/... → 404.
+
+   Inclua no FINAL de cada página, antes de </body>. Cada pasta tem a sua
+   própria cópia do script, então o src é sempre o mesmo:
+     <script src="js/back-redirect.js?v=5"></script>
    ============================================================ */
 (function () {
   if (window.__cfBackRedirect) return;
@@ -32,11 +35,11 @@
     // 2) UPSELL → o downsell DAQUELE upsell (pareamento fixo).
     if (upMatch) {
       var n = parseInt(upMatch[1], 10);
-      return '../downsell/up' + n + '/index.html' + qs;
+      return '/downsell/up' + n + '/index.html' + qs;
     }
 
-    // 3) FRONT (9.html / raiz) → downsell do front.
-    return 'downsell/front/index.html' + qs;
+    // 3) FRONT (/9/) → downsell do front.
+    return '/downsell/front/index.html' + qs;
   }
 
   // Empilha um estado falso pra capturar o 1º "voltar" no nosso handler
