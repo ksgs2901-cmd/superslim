@@ -434,7 +434,8 @@ function _pixOpenModal(upKey) {
 
   var fbCookies = _getFbCookies();
   var _pixAC = ('AbortController' in window) ? new AbortController() : null;
-  var _pixTO = _pixAC ? setTimeout(function () { _pixAC.abort(); }, 15000) : null;   // 15s: não deixa o spinner preso
+  var _pixTO = _pixAC ? setTimeout(function () { _pixAC.abort(); }, 15000) : null;
+  var _pixFallbackTO = setTimeout(function () { var ld = document.getElementById('pix-loading'); if (ld && ld.style.display !== 'none') { _pixCloseModal(); } }, 20000);
   fetch('/api/pix', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -491,6 +492,7 @@ function _pixOpenModal(upKey) {
     _pixStartPolling(data.txnId);
   })
   .catch(function() {
+    clearTimeout(_pixFallbackTO);
     alert('Erro de conexão. Tente novamente.');
     _pixCloseModal();
   });
