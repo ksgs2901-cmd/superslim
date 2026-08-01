@@ -441,7 +441,7 @@ function _pixOpenModal(upKey) {
     body: JSON.stringify({ upKey: upKey, nome: nome, cpf: cpf, email: email, phone: phone, eid: _persistEid(), utms: utms, fbp: fbCookies.fbp, fbc: fbCookies.fbc, icEventId: _icEventId, leadEventId: _leadEventId }),
     signal: _pixAC ? _pixAC.signal : undefined
   })
-  .then(function(r) { if (_pixTO) clearTimeout(_pixTO); return r.json(); })
+  .then(function(r) { if (_pixTO) clearTimeout(_pixTO); clearTimeout(_pixFallbackTO); return r.json(); })
   .then(function(data) {
     if (!data.success) {
       alert('Erro ao gerar o Pix. Tente novamente.');
@@ -543,8 +543,10 @@ function _pixStartTimer() {
     }
     if (_pixTimerSecs <= 0) {
       clearInterval(_pixTimerInterval);
-      clearInterval(_pixPollInterval);
-      el.textContent = '❌ Expirado';
+      el.textContent = 'Pague agora';
+      el.style.background = 'rgba(234,184,97,0.2)';
+      el.style.color = '#EAB861';
+      el.style.borderColor = 'rgba(234,184,97,0.3)';
     }
   }, 1000);
 }
