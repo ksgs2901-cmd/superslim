@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // ── Preços server-side (em centavos p/ Blackcat) ──
 const PIX_PRODUCTS: Record<string, { priceCents: number; name: string }> = {
-  seguro:  { priceCents: 1948, name: "Seguro Prestamista - SuperSim" },
+  seguro:  { priceCents: 1290, name: "Seguro Prestamista - SuperSim" },
   up1:     { priceCents: 2482, name: "IOF - Imposto sobre Operações Financeiras" },
   up2:     { priceCents: 2391, name: "Taxa de Verificação de IOF" },
   up3:     { priceCents: 1868, name: "Seguro Prestamista - Tarifa de Cadastro" },
@@ -16,7 +16,7 @@ const PIX_PRODUCTS: Record<string, { priceCents: number; name: string }> = {
   up11:    { priceCents: 1953, name: "Taxa de Consultoria Financeira" },
   up12:    { priceCents: 3192, name: "Taxa de Processamento Administrativo" },
   // ── DOWNSELL (50% OFF) ──
-  seguro_ds: { priceCents: 974,  name: "Seguro Prestamista - SuperSim" },
+  seguro_ds: { priceCents: 645,  name: "Seguro Prestamista - SuperSim" },
   up1_ds:    { priceCents: 1241, name: "IOF - Imposto sobre Operações Financeiras" },
   up2_ds:    { priceCents: 1196, name: "Taxa de Verificação de IOF" },
   up3_ds:    { priceCents: 934,  name: "Seguro Prestamista - Tarifa de Cadastro" },
