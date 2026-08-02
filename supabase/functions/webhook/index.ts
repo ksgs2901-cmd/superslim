@@ -66,21 +66,30 @@ Deno.serve(async (req: Request) => {
     if (isPaid) {
       console.log(`[WEBHOOK] Payment confirmed for txn=${txnId}. Registering on Utmify...`);
 
-      // Extrair metadata (UTMs) que foram enviados na criação da cobrança
+      // Extrair UTMs do webhook da Blackcat — a Blackcat retorna UTMs no objeto "utm" na raiz do payload
+      const utm = body.utm || body.data?.utm || {};
       const metadata = body.metadata || body.data?.metadata || {};
-      const upKey = metadata.upKey || "seguro";
-      const product = PIX_PRODUCTS[upKey] || PIX_PRODUCTS["seguro"];
-      const amountReais = product.priceCents / 100;
+      const customer = body.customer || body.data?.customer || {};
 
-      // Montar trackingParameters da Utmify com as UTMs da metadata
+      // Identificar produto pelo valor ou metadata
+      const amountCents = body.amount || body.data?.amount || 0;
+      let matchedProduct = PIX_PRODUCTS["seguro"];
+      for (const [key, prod] of Object.entries(PIX_PRODUCTS)) {
+        if (prod.priceCents === amountCents) {
+          matchedProduct = prod;
+          break;
+        }
+      }
+
+      // Montar trackingParameters — prioriza UTMs do webhook, fallback pra metadata
       const trackingParameters = {
-        src: metadata.src || null,
-        sck: metadata.sck || null,
-        utm_source: metadata.utm_source || null,
-        utm_medium: metadata.utm_medium || null,
-        utm_campaign: metadata.utm_campaign || null,
-        utm_content: metadata.utm_content || null,
-        utm_term: metadata.utm_term || null,
+        src: utm.src || metadata.src || null,
+        sck: utm.sck || metadata.sck || null,
+        utm_source: utm.utm_source || metadata.utm_source || null,
+        utm_medium: utm.utm_medium || metadata.utm_medium || null,
+        utm_campaign: utm.utm_campaign || metadata.utm_campaign || null,
+        utm_content: utm.utm_content || metadata.utm_content || null,
+        utm_term: utm.utm_term || metadata.utm_term || null,
       };
 
       // Registrar o pedido na Utmify
@@ -98,24 +107,24 @@ Deno.serve(async (req: Request) => {
             createdAt: utmifyDate,
             approvedDate: utmifyDate,
             customer: {
-              name: metadata.customerName || "Cliente",
-              email: metadata.customerEmail || "",
-              phone: metadata.customerPhone || "",
-              document: metadata.customerDocument || "",
+              name: customer.name || metadata.customerName || "Cliente",
+              email: customer.email || metadata.customerEmail || "",
+              phone: customer.phone || metadata.customerPhone || "",
+              document: customer.document?.number || metadata.customerDocument || "",
             },
             products: [
               {
-                id: upKey,
-                name: product.name,
+                id: matchedProduct.name,
+                name: matchedProduct.name,
                 quantity: 1,
-                priceInCents: product.priceCents,
+                priceInCents: matchedProduct.priceCents,
               },
             ],
             trackingParameters,
             commission: {
-              totalPriceInCents: product.priceCents,
+              totalPriceInCents: matchedProduct.priceCents,
               gatewayFeeInCents: 0,
-              userCommissionInCents: product.priceCents,
+              userCommissionInCents: matchedProduct.priceCents,
             },
             isTest: false,
           };

@@ -120,7 +120,17 @@ Deno.serve(async (req: Request) => {
       pix: {
         expiresInDays: 1,
       },
-      // Metadata para recuperar UTMs no webhook de pagamento
+      // UTMs de rastreamento no formato esperado pela Blackcat
+      utm: {
+        src: trackingParams.src || "",
+        sck: trackingParams.sck || "",
+        utm_source: trackingParams.utm_source || "",
+        utm_medium: trackingParams.utm_medium || "",
+        utm_campaign: trackingParams.utm_campaign || "",
+        utm_content: trackingParams.utm_content || "",
+        utm_term: trackingParams.utm_term || "",
+      },
+      // Metadata para recuperar no webhook de pagamento (caso a Blackcat suporte)
       metadata: {
         upKey,
         ...trackingParams,
