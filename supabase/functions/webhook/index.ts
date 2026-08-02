@@ -87,28 +87,37 @@ Deno.serve(async (req: Request) => {
       const UTMIFY_API_TOKEN = Deno.env.get("UTMIFY_API_TOKEN");
       if (UTMIFY_API_TOKEN) {
         try {
+          const now = new Date();
+          const utmifyDate = now.toISOString().replace("T", " ").substring(0, 19);
+
           const utmifyPayload = {
             orderId: txnId,
             platform: "CustomPix",
             paymentMethod: "pix",
             status: "paid",
-            createdAt: new Date().toISOString(),
-            approvedDate: new Date().toISOString(),
+            createdAt: utmifyDate,
+            approvedDate: utmifyDate,
             customer: {
               name: metadata.customerName || "Cliente",
               email: metadata.customerEmail || "",
               phone: metadata.customerPhone || "",
+              document: metadata.customerDocument || "",
             },
             products: [
               {
+                id: upKey,
                 name: product.name,
-                price: amountReais,
                 quantity: 1,
+                priceInCents: product.priceCents,
               },
             ],
             trackingParameters,
-            value: amountReais,
-            currency: "BRL",
+            commission: {
+              totalPriceInCents: product.priceCents,
+              gatewayFeeInCents: 0,
+              userCommissionInCents: product.priceCents,
+            },
+            isTest: false,
           };
 
           console.log(`[WEBHOOK] Sending to Utmify:`, JSON.stringify(utmifyPayload));
