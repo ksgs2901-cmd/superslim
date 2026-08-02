@@ -56,6 +56,18 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const { upKey, nome, cpf, email, phone } = body;
 
+    // ── UTMs de rastreamento (enviados pelo frontend via getUtms()) ──
+    const utms = body.utms || {};
+    const trackingParams = {
+      src: utms.src || null,
+      sck: utms.sck || null,
+      utm_source: utms.utm_source || null,
+      utm_medium: utms.utm_medium || null,
+      utm_campaign: utms.utm_campaign || null,
+      utm_content: utms.utm_content || null,
+      utm_term: utms.utm_term || null,
+    };
+
     // ── Valida produto ──
     const product = PIX_PRODUCTS[upKey];
     if (!product) {
@@ -108,9 +120,17 @@ Deno.serve(async (req: Request) => {
       pix: {
         expiresInDays: 1,
       },
+      // Metadata para recuperar UTMs no webhook de pagamento
+      metadata: {
+        upKey,
+        ...trackingParams,
+        customerEmail: email || "",
+        customerPhone: phoneClean || "",
+        customerName: nome || "",
+      },
     };
 
-    console.log(`[PIX] Creating sale for upKey=${upKey}, amount=${product.priceCents}`);
+    console.log(`[PIX] Creating sale for upKey=${upKey}, amount=${product.priceCents}, utms=${JSON.stringify(trackingParams)}`);
 
     const bcResponse = await fetch(`${BLACKCAT_URL}/sales/create-sale`, {
       method: "POST",
