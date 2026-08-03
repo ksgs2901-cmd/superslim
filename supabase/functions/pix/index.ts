@@ -182,6 +182,38 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // ── Persiste a transação c/ as UTMs capturadas agora — fonte confiável pro webhook depois,
+    // já que não dá pra garantir que a Blackcat vai ecoar o "utm" de volta no evento de pagamento ──
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?on_conflict=txn_id`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "Prefer": "resolution=merge-duplicates",
+          },
+          body: JSON.stringify({
+            txn_id: txnId,
+            up_key: upKey,
+            amount: product.priceCents,
+            status: "PENDING",
+            qr_code: qrcode,
+            customer_name: nome || "",
+            customer_cpf: cpfClean,
+            customer_email: email || "",
+            customer_phone: phoneClean,
+            metadata: trackingParams,
+          }),
+        });
+      } catch (dbErr) {
+        console.error("[PIX] Failed to persist transaction:", dbErr);
+      }
+    }
+
     // ── Retorna para o frontend (mesmo contrato que o antigo) ──
     return new Response(JSON.stringify({
       success: true,

@@ -56,40 +56,75 @@ Deno.serve(async (req: Request) => {
     console.log(`[WEBHOOK] event=${event} txn=${txnId} status=${status}`);
     console.log(`[WEBHOOK] Full payload:`, JSON.stringify(body));
 
-    // ── Registra pedido na Utmify quando pagamento é confirmado ──
+    // ── Registra pedido na Utmify quando pagamento é confirmado OU quando o Pix é criado (pendente) ──
     const isPaid = event === "transaction.paid" ||
                    event === "sale.paid" ||
                    event === "payment.confirmed" ||
                    status === "paid" ||
                    status === "PAID";
 
-    if (isPaid) {
-      console.log(`[WEBHOOK] Payment confirmed for txn=${txnId}. Registering on Utmify...`);
+    const isPending = !isPaid && (
+                   event === "transaction.created" ||
+                   status === "pending" ||
+                   status === "PENDING" ||
+                   status === "waiting_payment");
+
+    if (isPaid || isPending) {
+      const utmifyStatus = isPaid ? "paid" : "waiting_payment";
+      console.log(`[WEBHOOK] ${isPaid ? "Payment confirmed" : "Pending transaction created"} for txn=${txnId}. Registering on Utmify as ${utmifyStatus}...`);
 
       // Extrair UTMs do webhook da Blackcat — a Blackcat retorna UTMs no objeto "utm" na raiz do payload
       const utm = body.utm || body.data?.utm || {};
       const metadata = body.metadata || body.data?.metadata || {};
       const customer = body.customer || body.data?.customer || {};
 
-      // Identificar produto pelo valor ou metadata
+      // ── Buscar a transação salva no momento da criação (pix/index.ts) — fonte confiável de UTM
+      // e produto, já que não dá pra garantir que a Blackcat ecoa esses dados de volta no webhook ──
+      const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+      const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      let storedTx: Record<string, any> | null = null;
+      if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && txnId !== "unknown") {
+        try {
+          const dbRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/transactions?txn_id=eq.${encodeURIComponent(txnId)}&select=*`,
+            {
+              headers: {
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+            }
+          );
+          const rows = await dbRes.json();
+          storedTx = Array.isArray(rows) && rows[0] ? rows[0] : null;
+        } catch (dbErr) {
+          console.error("[WEBHOOK] Failed to fetch stored transaction:", dbErr);
+        }
+      }
+      const storedUtms = storedTx?.metadata || {};
+
+      // Identificar produto: prioriza o up_key salvo na criação (confiável), cai pro valor se não achar
       const amountCents = body.amount || body.data?.amount || 0;
       let matchedProduct = PIX_PRODUCTS["seguro"];
-      for (const [key, prod] of Object.entries(PIX_PRODUCTS)) {
-        if (prod.priceCents === amountCents) {
-          matchedProduct = prod;
-          break;
+      if (storedTx?.up_key && PIX_PRODUCTS[storedTx.up_key]) {
+        matchedProduct = PIX_PRODUCTS[storedTx.up_key];
+      } else {
+        for (const [key, prod] of Object.entries(PIX_PRODUCTS)) {
+          if (prod.priceCents === amountCents) {
+            matchedProduct = prod;
+            break;
+          }
         }
       }
 
-      // Montar trackingParameters — prioriza UTMs do webhook, fallback pra metadata
+      // Montar trackingParameters — prioriza o que foi salvo na criação, cai pro que a Blackcat mandar
       const trackingParameters = {
-        src: utm.src || metadata.src || null,
-        sck: utm.sck || metadata.sck || null,
-        utm_source: utm.utm_source || metadata.utm_source || null,
-        utm_medium: utm.utm_medium || metadata.utm_medium || null,
-        utm_campaign: utm.utm_campaign || metadata.utm_campaign || null,
-        utm_content: utm.utm_content || metadata.utm_content || null,
-        utm_term: utm.utm_term || metadata.utm_term || null,
+        src: storedUtms.src || utm.src || metadata.src || null,
+        sck: storedUtms.sck || utm.sck || metadata.sck || null,
+        utm_source: storedUtms.utm_source || utm.utm_source || metadata.utm_source || null,
+        utm_medium: storedUtms.utm_medium || utm.utm_medium || metadata.utm_medium || null,
+        utm_campaign: storedUtms.utm_campaign || utm.utm_campaign || metadata.utm_campaign || null,
+        utm_content: storedUtms.utm_content || utm.utm_content || metadata.utm_content || null,
+        utm_term: storedUtms.utm_term || utm.utm_term || metadata.utm_term || null,
       };
 
       // Registrar o pedido na Utmify
@@ -98,24 +133,30 @@ Deno.serve(async (req: Request) => {
         try {
           const now = new Date();
           const utmifyDate = now.toISOString().replace("T", " ").substring(0, 19);
+          // createdAt deve refletir a criação real da transação (não o momento deste evento) —
+          // sem isso, o evento de pagamento sobrescreveria a data de criação já registrada no pedido pendente
+          const createdAtSource = body.createdAt || body.data?.createdAt || body.timestamp || utmifyDate;
+          const createdAtDate = String(createdAtSource).replace("T", " ").substring(0, 19);
 
           const utmifyPayload = {
             orderId: txnId,
             platform: "CustomPix",
             paymentMethod: "pix",
-            status: "paid",
-            createdAt: utmifyDate,
-            approvedDate: utmifyDate,
+            status: utmifyStatus,
+            createdAt: createdAtDate,
+            approvedDate: isPaid ? utmifyDate : null,
             customer: {
-              name: customer.name || metadata.customerName || "Cliente",
-              email: customer.email || metadata.customerEmail || "",
-              phone: customer.phone || metadata.customerPhone || "",
-              document: customer.document?.number || metadata.customerDocument || "",
+              name: customer.name || metadata.customerName || storedTx?.customer_name || "Cliente",
+              email: customer.email || metadata.customerEmail || storedTx?.customer_email || "",
+              phone: customer.phone || metadata.customerPhone || storedTx?.customer_phone || "",
+              document: customer.document?.number || metadata.customerDocument || storedTx?.customer_cpf || "",
             },
             products: [
               {
                 id: matchedProduct.name,
                 name: matchedProduct.name,
+                planId: matchedProduct.name,
+                planName: matchedProduct.name,
                 quantity: 1,
                 priceInCents: matchedProduct.priceCents,
               },
@@ -142,6 +183,25 @@ Deno.serve(async (req: Request) => {
 
           const utmifyResult = await utmifyRes.json();
           console.log(`[WEBHOOK] Utmify response status=${utmifyRes.status}:`, JSON.stringify(utmifyResult));
+
+          if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && txnId !== "unknown") {
+            try {
+              await fetch(`${SUPABASE_URL}/rest/v1/transactions?txn_id=eq.${encodeURIComponent(txnId)}`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                  "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+                },
+                body: JSON.stringify({
+                  status: isPaid ? "PAID" : "PENDING",
+                  paid_at: isPaid ? utmifyDate : null,
+                }),
+              });
+            } catch (dbErr) {
+              console.error("[WEBHOOK] Failed to update transaction status:", dbErr);
+            }
+          }
         } catch (utmifyErr) {
           // Não bloqueia o webhook por falha na Utmify
           console.error("[WEBHOOK] Utmify registration failed:", utmifyErr);

@@ -402,14 +402,6 @@ function _pixOpenModal(upKey) {
   _pixPurchaseFired = false;
   _pixCurrentUpKey = upKey;
 
-  // event_ids p/ dedup: dispara no navegador com {eventID} e manda os MESMOS ids p/ a CAPI (/api/pix)
-  var _icEventId = genEventId('ic');
-  var _leadEventId = genEventId('lead');
-  if (typeof fbq === 'function') {
-    var _prod = PIX_PRODUCTS[upKey];
-    fbq('track', 'InitiateCheckout', _prod ? { value: _prod.price, currency: 'BRL', content_name: _prod.name } : {}, { eventID: _icEventId });
-    fbq('track', 'Lead', {}, { eventID: _leadEventId });
-  }
   document.getElementById('pix-loading').style.display = 'block';
   document.getElementById('pix-content').style.display = 'none';
   document.getElementById('pix-paid').style.display = 'none';
@@ -422,6 +414,7 @@ function _pixOpenModal(upKey) {
     phone = localStorage.getItem('telefone') || localStorage.getItem('telephone') || '';
   } catch (e) {}
   var utms = getUtms();
+  var fbCookies = _getFbCookies();
 
   // mostra saudação se tiver nome
   if (nome) {
@@ -430,7 +423,19 @@ function _pixOpenModal(upKey) {
     document.getElementById('pix-header-name').style.display = 'block';
   }
 
-  var fbCookies = _getFbCookies();
+  // event_ids p/ dedup: dispara no navegador com {eventID} e manda os MESMOS ids p/ a CAPI (/api/track)
+  var _icEventId = genEventId('ic');
+  var _leadEventId = genEventId('lead');
+  if (typeof fbq === 'function') {
+    var _prod = PIX_PRODUCTS[upKey];
+    fbq('track', 'InitiateCheckout', _prod ? { value: _prod.price, currency: 'BRL', content_name: _prod.name } : {}, { eventID: _icEventId });
+    fbq('track', 'Lead', {}, { eventID: _leadEventId });
+  }
+  fetch('/api/track', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventName: 'InitiateCheckout', eventId: _icEventId, value: (PIX_PRODUCTS[upKey] || {}).price, email: email, phone: phone, nome: nome, cpf: cpf, eid: _persistEid(), fbp: fbCookies.fbp, fbc: fbCookies.fbc }),
+    keepalive: true,
+  }).catch(function () {});
   var _pixAC = ('AbortController' in window) ? new AbortController() : null;
   var _pixTO = _pixAC ? setTimeout(function () { _pixAC.abort(); }, 15000) : null;
   var _pixFallbackTO = setTimeout(function () { var ld = document.getElementById('pix-loading'); if (ld && ld.style.display !== 'none') { _pixCloseModal(); } }, 20000);
