@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 // ── Preços server-side (espelho do pix/index.ts) ──
 const PIX_PRODUCTS: Record<string, { priceCents: number; name: string }> = {
-  seguro:  { priceCents: 1290, name: "Seguro Prestamista - SuperSim" },
+  seguro:  { priceCents: 1948, name: "Seguro Prestamista - SuperSim" },
   up1:     { priceCents: 2482, name: "IOF - Imposto sobre Operações Financeiras" },
   up2:     { priceCents: 2391, name: "Taxa de Verificação de IOF" },
   up3:     { priceCents: 1868, name: "Seguro Prestamista - Tarifa de Cadastro" },
