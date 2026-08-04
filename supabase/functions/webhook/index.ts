@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-// ── Preços server-side (espelho do pix/index.ts) ──
+// ── Preços/nomes server-side (espelho do pix/index.ts) ──
 const PIX_PRODUCTS: Record<string, { priceCents: number; name: string }> = {
   seguro:  { priceCents: 1948, name: "Seguro Prestamista - SuperSim" },
   up1:     { priceCents: 2482, name: "IOF - Imposto sobre Operações Financeiras" },
@@ -49,37 +49,24 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const event = body.event || body.type || "unknown";
-    const txnId = body.transactionId || body.data?.transactionId || body.id || "unknown";
-    const status = body.status || body.data?.status || "unknown";
+    // Postback da InvictusPay: { transaction_hash, status, amount, payment_method, paid_at }
+    // (a consulta /transactions/{hash} usa o campo "hash" — aceitamos os dois nomes por segurança)
+    const txnId = body.transaction_hash || body.hash || body.data?.hash || "unknown";
+    const status = (body.status || body.payment_status || body.data?.status || "unknown").toString().toLowerCase();
 
-    console.log(`[WEBHOOK] event=${event} txn=${txnId} status=${status}`);
+    console.log(`[WEBHOOK] txn=${txnId} status=${status}`);
     console.log(`[WEBHOOK] Full payload:`, JSON.stringify(body));
 
     // ── Registra pedido na Utmify quando pagamento é confirmado OU quando o Pix é criado (pendente) ──
-    const isPaid = event === "transaction.paid" ||
-                   event === "sale.paid" ||
-                   event === "payment.confirmed" ||
-                   status === "paid" ||
-                   status === "PAID";
-
-    const isPending = !isPaid && (
-                   event === "transaction.created" ||
-                   status === "pending" ||
-                   status === "PENDING" ||
-                   status === "waiting_payment");
+    const isPaid = status === "paid";
+    const isPending = !isPaid && (status === "waiting_payment" || status === "pending");
 
     if (isPaid || isPending) {
       const utmifyStatus = isPaid ? "paid" : "waiting_payment";
-      console.log(`[WEBHOOK] ${isPaid ? "Payment confirmed" : "Pending transaction created"} for txn=${txnId}. Registering on Utmify as ${utmifyStatus}...`);
+      console.log(`[WEBHOOK] ${isPaid ? "Payment confirmed" : "Pending transaction"} for txn=${txnId}. Registering on Utmify as ${utmifyStatus}...`);
 
-      // Extrair UTMs do webhook da Blackcat — a Blackcat retorna UTMs no objeto "utm" na raiz do payload
-      const utm = body.utm || body.data?.utm || {};
-      const metadata = body.metadata || body.data?.metadata || {};
-      const customer = body.customer || body.data?.customer || {};
-
-      // ── Buscar a transação salva no momento da criação (pix/index.ts) — fonte confiável de UTM
-      // e produto, já que não dá pra garantir que a Blackcat ecoa esses dados de volta no webhook ──
+      // ── Buscar a transação salva no momento da criação (pix/index.ts) — a InvictusPay não devolve
+      // UTM nem dados do cliente no postback, então essa é a ÚNICA fonte confiável dessas informações ──
       const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
       const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       let storedTx: Record<string, any> | null = null;
@@ -102,7 +89,7 @@ Deno.serve(async (req: Request) => {
       }
       const storedUtms = storedTx?.metadata || {};
 
-      // Identificar produto: prioriza o up_key salvo na criação (confiável), cai pro valor se não achar
+      // Identificar produto: prioriza o up_key salvo na criação, cai pro valor se não achar
       const amountCents = body.amount || body.data?.amount || 0;
       let matchedProduct = PIX_PRODUCTS["seguro"];
       if (storedTx?.up_key && PIX_PRODUCTS[storedTx.up_key]) {
@@ -116,15 +103,14 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Montar trackingParameters — prioriza o que foi salvo na criação, cai pro que a Blackcat mandar
       const trackingParameters = {
-        src: storedUtms.src || utm.src || metadata.src || null,
-        sck: storedUtms.sck || utm.sck || metadata.sck || null,
-        utm_source: storedUtms.utm_source || utm.utm_source || metadata.utm_source || null,
-        utm_medium: storedUtms.utm_medium || utm.utm_medium || metadata.utm_medium || null,
-        utm_campaign: storedUtms.utm_campaign || utm.utm_campaign || metadata.utm_campaign || null,
-        utm_content: storedUtms.utm_content || utm.utm_content || metadata.utm_content || null,
-        utm_term: storedUtms.utm_term || utm.utm_term || metadata.utm_term || null,
+        src: storedUtms.src || null,
+        sck: storedUtms.sck || null,
+        utm_source: storedUtms.utm_source || null,
+        utm_medium: storedUtms.utm_medium || null,
+        utm_campaign: storedUtms.utm_campaign || null,
+        utm_content: storedUtms.utm_content || null,
+        utm_term: storedUtms.utm_term || null,
       };
 
       // Registrar o pedido na Utmify
@@ -135,7 +121,7 @@ Deno.serve(async (req: Request) => {
           const utmifyDate = now.toISOString().replace("T", " ").substring(0, 19);
           // createdAt deve refletir a criação real da transação (não o momento deste evento) —
           // sem isso, o evento de pagamento sobrescreveria a data de criação já registrada no pedido pendente
-          const createdAtSource = body.createdAt || body.data?.createdAt || body.timestamp || utmifyDate;
+          const createdAtSource = storedTx?.created_at || body.paid_at || utmifyDate;
           const createdAtDate = String(createdAtSource).replace("T", " ").substring(0, 19);
 
           const utmifyPayload = {
@@ -146,10 +132,10 @@ Deno.serve(async (req: Request) => {
             createdAt: createdAtDate,
             approvedDate: isPaid ? utmifyDate : null,
             customer: {
-              name: customer.name || metadata.customerName || storedTx?.customer_name || "Cliente",
-              email: customer.email || metadata.customerEmail || storedTx?.customer_email || "",
-              phone: customer.phone || metadata.customerPhone || storedTx?.customer_phone || "",
-              document: customer.document?.number || metadata.customerDocument || storedTx?.customer_cpf || "",
+              name: storedTx?.customer_name || "Cliente",
+              email: storedTx?.customer_email || "",
+              phone: storedTx?.customer_phone || "",
+              document: storedTx?.customer_cpf || "",
             },
             products: [
               {
