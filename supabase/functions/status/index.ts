@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const INVICTUS_URL = "https://api.invictuspay.app.br/api/public/v1";
+const BLACKCAT_URL = "https://api.blackcatoficial.com/api";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,27 +32,28 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const INVICTUS_API_TOKEN = Deno.env.get("INVICTUS_API_TOKEN");
-    if (!INVICTUS_API_TOKEN) {
-      console.error("INVICTUS_API_TOKEN not configured");
+    const BLACKCAT_SECRET = Deno.env.get("BLACKCAT_SECRET_KEY");
+    if (!BLACKCAT_SECRET) {
+      console.error("BLACKCAT_SECRET_KEY not configured");
       return new Response(JSON.stringify({ paid: false, error: "Server config error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ── Consulta status na InvictusPay ──
-    const invRes = await fetch(`${INVICTUS_URL}/transactions/${txnId}?api_token=${INVICTUS_API_TOKEN}`, {
+    // ── Consulta status na Blackcat ──
+    const bcResponse = await fetch(`${BLACKCAT_URL}/sales/${txnId}/status`, {
       method: "GET",
       headers: {
-        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-API-Key": BLACKCAT_SECRET,
       },
     });
 
-    const invData = await invRes.json();
+    const bcData = await bcResponse.json();
 
-    if (!invRes.ok) {
-      console.error(`[STATUS] InvictusPay error for txn=${txnId}:`, JSON.stringify(invData));
+    if (!bcResponse.ok) {
+      console.error(`[STATUS] Blackcat error for txn=${txnId}:`, JSON.stringify(bcData));
       return new Response(JSON.stringify({ paid: false }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,8 +61,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Verifica se está pago ──
-    const status = (invData.payment_status || invData.status || "").toLowerCase();
-    const isPaid = status === "paid";
+    // Blackcat retorna: { success: true, data: { status: "PAID" | "PENDING" | "CANCELLED" | "REFUNDED" } }
+    const status = (bcData.data?.status || bcData.status || "").toUpperCase();
+    const isPaid = status === "PAID";
 
     console.log(`[STATUS] txn=${txnId} status=${status} paid=${isPaid}`);
 
