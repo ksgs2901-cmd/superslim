@@ -1,4 +1,4 @@
-﻿// Rastreamento avançado do TOPO do funil (páginas de entrada).
+// Rastreamento avançado do TOPO do funil (páginas de entrada).
 // Faz Advanced Matching MAXIMIZADO em toda página + expõe fbTrack() com dedup browser↔CAPI.
 // (Nos upsells quem cuida disso é o checkout-shared.js — este script é p/ as páginas iniciais.)
 
@@ -26,3 +26,16 @@
   } catch (e) {}
 })();
 
+// Google tag (gtag.js)
+(function() {
+  var gtagScript = document.createElement('script');
+  gtagScript.async = true;
+  gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=AW-18377307457";
+  document.head.appendChild(gtagScript);
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  window.gtag = gtag; // expõe no window
+  gtag('js', new Date());
+  gtag('config', 'AW-18377307457');
+})();
