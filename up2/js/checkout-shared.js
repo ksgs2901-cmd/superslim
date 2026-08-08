@@ -448,7 +448,7 @@ function _pixOpenModal(upKey) {
   .then(function(r) { if (_pixTO) clearTimeout(_pixTO); clearTimeout(_pixFallbackTO); return r.json(); })
   .then(function(data) {
     if (!data.success) {
-      alert('Erro ao gerar o Pix. Tente novamente.');
+      alert('Erro ao gerar o Pix. Detalhe: ' + (data.error || 'Tente novamente'));
       _pixCloseModal();
       return;
     }
