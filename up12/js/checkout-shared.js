@@ -431,7 +431,7 @@ function _pixOpenModal(upKey) {
     fbq('track', 'InitiateCheckout', _prod ? { value: _prod.price, currency: 'BRL', content_name: _prod.name } : {}, { eventID: _icEventId });
     fbq('track', 'Lead', {}, { eventID: _leadEventId });
   }
-  fetch('/api/track', {
+  fetch('https://ziznxwaehnifcinosenv.supabase.co/functions/v1/track', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventName: 'InitiateCheckout', eventId: _icEventId, value: (PIX_PRODUCTS[upKey] || {}).price, email: email, phone: phone, nome: nome, cpf: cpf, eid: _persistEid(), fbp: fbCookies.fbp, fbc: fbCookies.fbc }),
     keepalive: true,
@@ -439,7 +439,7 @@ function _pixOpenModal(upKey) {
   var _pixAC = ('AbortController' in window) ? new AbortController() : null;
   var _pixTO = _pixAC ? setTimeout(function () { _pixAC.abort(); }, 15000) : null;
   var _pixFallbackTO = setTimeout(function () { var ld = document.getElementById('pix-loading'); if (ld && ld.style.display !== 'none') { _pixCloseModal(); } }, 20000);
-  fetch('/api/pix', {
+  fetch('https://ziznxwaehnifcinosenv.supabase.co/functions/v1/pix', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ upKey: upKey, nome: nome, cpf: cpf, email: email, phone: phone, eid: _persistEid(), utms: utms, fbp: fbCookies.fbp, fbc: fbCookies.fbc, icEventId: _icEventId, leadEventId: _leadEventId }),
@@ -484,7 +484,7 @@ function _pixOpenModal(upKey) {
     if (typeof fbq === 'function') {
       var _apiEventId = genEventId('api');
       fbq('track', 'AddPaymentInfo', { value: data.amount, currency: 'BRL' }, { eventID: _apiEventId });
-      fetch('/api/track', {
+      fetch('https://ziznxwaehnifcinosenv.supabase.co/functions/v1/track', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventName: 'AddPaymentInfo', eventId: _apiEventId, value: data.amount, email: email, phone: phone, nome: nome, cpf: cpf, eid: _persistEid(), fbp: fbCookies.fbp, fbc: fbCookies.fbc }),
         keepalive: true,
