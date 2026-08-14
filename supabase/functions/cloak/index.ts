@@ -368,6 +368,38 @@ function scoreFingerprintData(fp: FingerprintData, userAgent: string): { score: 
     reasons.push("hw-concurrency=0");
   }
 
+  // ── MOBILE-ONLY ENFORCEMENT ──
+  // Campaign targets mobile only. Desktop = reviewer/bot.
+
+  // No touch support = desktop/bot (all modern phones have touch)
+  if (fp.touchPoints === 0) {
+    score += 20;
+    reasons.push("no-touch");
+  }
+
+  // Desktop platform (Win32, Linux x86_64, MacIntel)
+  const plat = (fp.platform || "").toLowerCase();
+  if (plat.includes("win") || plat.includes("linux x86") || plat.includes("macintel")) {
+    // Only flag if UA claims to be mobile (spoofing) or is desktop
+    if (!/mobile|android|iphone/i.test(userAgent)) {
+      score += 25;
+      reasons.push(`desktop-platform:${plat}`);
+    }
+  }
+
+  // Large screen = desktop (mobile rarely exceeds 480px width in portrait)
+  // Note: screen.width on mobile reports device pixels
+  if (fp.screenW > 1024 && fp.touchPoints === 0) {
+    score += 15;
+    reasons.push(`large-screen:${fp.screenW}x${fp.screenH}`);
+  }
+
+  // Desktop UA without mobile keywords
+  if (!/mobile|android|iphone|ipad|ipod/i.test(userAgent) && !/bot|crawl|spider/i.test(userAgent)) {
+    score += 10;
+    reasons.push("desktop-ua");
+  }
+
   return { score, reasons };
 }
 
