@@ -461,6 +461,14 @@ function analyzeServerSide(
     return { verdict: "bot", reason: rateCheck.reason };
   }
 
+  // 8) MOBILE-ONLY: Desktop UA → safe page
+  // Campaign targets mobile only. If UA doesn't have mobile keywords → reviewer/bot on desktop
+  const isMobileUA = /mobile|android|iphone|ipad|ipod|opera\s?mini|iemobile|wpdesktop/i.test(userAgent);
+  const isDesktopIndicator = /windows\s?nt|macintosh|mac\s?os\s?x|linux\s?x86|cros\s/i.test(userAgent);
+  if (!isMobileUA && isDesktopIndicator) {
+    return { verdict: "bot", reason: `desktop-ua:mobile-only` };
+  }
+
   // Passou em tudo → humano (server-side)
   return { verdict: "human", reason: "server-passed" };
 }
