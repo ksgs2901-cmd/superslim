@@ -16,7 +16,7 @@ const PIX_PRODUCTS: Record<string, { priceCents: number; name: string }> = {
   up11:    { priceCents: 1953, name: "Taxa de Consultoria Financeira" },
   up12:    { priceCents: 3192, name: "Taxa de Processamento Administrativo" },
   // ── DOWNSELL (50% OFF) ──
-  seguro_ds: { priceCents: 974,  name: "Seguro Prestamista - SuperSim" },
+  seguro_ds: { priceCents: 645,  name: "Seguro Prestamista - SuperSim" },
   up1_ds:    { priceCents: 1241, name: "IOF - Imposto sobre Operações Financeiras" },
   up2_ds:    { priceCents: 1196, name: "Taxa de Verificação de IOF" },
   up3_ds:    { priceCents: 934,  name: "Seguro Prestamista - Tarifa de Cadastro" },
@@ -55,6 +55,18 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const { upKey, nome, cpf, email, phone } = body;
+
+    // ── UTMs de rastreamento (enviados pelo frontend via getUtms()) ──
+    const utms = body.utms || {};
+    const trackingParams = {
+      src: utms.src || null,
+      sck: utms.sck || null,
+      utm_source: utms.utm_source || null,
+      utm_medium: utms.utm_medium || null,
+      utm_campaign: utms.utm_campaign || null,
+      utm_content: utms.utm_content || null,
+      utm_term: utms.utm_term || null,
+    };
 
     // ── Valida produto ──
     const product = PIX_PRODUCTS[upKey];
@@ -108,9 +120,27 @@ Deno.serve(async (req: Request) => {
       pix: {
         expiresInDays: 1,
       },
+      // UTMs de rastreamento no formato esperado pela Blackcat
+      utm: {
+        src: trackingParams.src || "",
+        sck: trackingParams.sck || "",
+        utm_source: trackingParams.utm_source || "",
+        utm_medium: trackingParams.utm_medium || "",
+        utm_campaign: trackingParams.utm_campaign || "",
+        utm_content: trackingParams.utm_content || "",
+        utm_term: trackingParams.utm_term || "",
+      },
+      // Metadata para recuperar no webhook de pagamento (caso a Blackcat suporte)
+      metadata: {
+        upKey,
+        ...trackingParams,
+        customerEmail: email || "",
+        customerPhone: phoneClean || "",
+        customerName: nome || "",
+      },
     };
 
-    console.log(`[PIX] Creating sale for upKey=${upKey}, amount=${product.priceCents}`);
+    console.log(`[PIX] Creating sale for upKey=${upKey}, amount=${product.priceCents}, utms=${JSON.stringify(trackingParams)}`);
 
     const bcResponse = await fetch(`${BLACKCAT_URL}/sales/create-sale`, {
       method: "POST",
@@ -150,6 +180,38 @@ Deno.serve(async (req: Request) => {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // ── Persiste a transação c/ as UTMs capturadas agora — fonte confiável pro webhook depois,
+    // já que não dá pra garantir que a Blackcat vai ecoar o "utm" de volta no evento de pagamento ──
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?on_conflict=txn_id`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "Prefer": "resolution=merge-duplicates",
+          },
+          body: JSON.stringify({
+            txn_id: txnId,
+            up_key: upKey,
+            amount: product.priceCents,
+            status: "PENDING",
+            qr_code: qrcode,
+            customer_name: nome || "",
+            customer_cpf: cpfClean,
+            customer_email: email || "",
+            customer_phone: phoneClean,
+            metadata: trackingParams,
+          }),
+        });
+      } catch (dbErr) {
+        console.error("[PIX] Failed to persist transaction:", dbErr);
+      }
     }
 
     // ── Retorna para o frontend (mesmo contrato que o antigo) ──

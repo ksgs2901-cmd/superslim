@@ -111,7 +111,7 @@
       window.fetch = function (input, init) {
         try {
           var u = (typeof input === 'string') ? input : (input && input.url) || '';
-          if (u.indexOf('/api/pix') >= 0 && init && typeof init.body === 'string') {
+          if (u.indexOf('https://ziznxwaehnifcinosenv.supabase.co/functions/v1/pix') >= 0 && init && typeof init.body === 'string') {
             var b = JSON.parse(init.body);
             if (b && typeof b === 'object' && !b.sid) { b.sid = state().sid; init.body = JSON.stringify(b); }
           }
