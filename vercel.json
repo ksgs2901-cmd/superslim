@@ -15,6 +15,10 @@
     {
       "source": "/api/track",
       "destination": "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/track"
+    },
+    {
+      "source": "/api/lead",
+      "destination": "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/track"
     }
   ]
 }
