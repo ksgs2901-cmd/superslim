@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/cpf",
-      "destination": "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/cpf"
-    },
-    {
       "source": "/api/pix",
       "destination": "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/pix"
     },
