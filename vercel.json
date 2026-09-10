@@ -1,4 +1,9 @@
 {
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "framework": null,
+  "installCommand": "",
+  "ignoreCommand": "",
   "rewrites": [
     {
       "source": "/api/pix",
@@ -12,5 +17,6 @@
       "source": "/api/track",
       "destination": "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/track"
     }
-  ]
+  ],
+  "excludeFiles": "supabase/**"
 }
