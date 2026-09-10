@@ -1,0 +1,39 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+
+# Redirect /api/cpf to the Netlify serverless function
+[[redirects]]
+  from = "/api/cpf"
+  to = "/.netlify/functions/cpf"
+  status = 200
+
+# Proxy /api/pix to Supabase Edge Function
+[[redirects]]
+  from = "/api/pix"
+  to = "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/pix"
+  status = 200
+  force = true
+
+# Proxy /api/status to Supabase Edge Function
+[[redirects]]
+  from = "/api/status"
+  to = "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/status"
+  status = 200
+  force = true
+
+# Proxy /api/track to Supabase Edge Function
+[[redirects]]
+  from = "/api/track"
+  to = "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/track"
+  status = 200
+  force = true
+
+# Proxy /api/lead to Supabase Edge Function (same as track)
+[[redirects]]
+  from = "/api/lead"
+  to = "https://ziznxwaehnifcinosenv.supabase.co/functions/v1/track"
+  status = 200
+  force = true
