@@ -517,18 +517,31 @@
         const correct = mae.toUpperCase();
         // Pega 2 nomes falsos aleatórios diferentes do nome real
         const shuffledFakes = fakeNames.filter(f => f !== correct).sort(() => Math.random() - 0.5);
-        const opts = [correct, shuffledFakes[0], shuffledFakes[1], nenhuma]
-          .sort(() => Math.random() - 0.5);
+        const opts = shuffleSafe([correct, shuffledFakes[0], shuffledFakes[1], nenhuma], correct);
 
         renderOpcoes(opts, correct);
       } else {
         // API não achou: resposta certa é "Nenhuma das alternativas"
         const shuffledFakes = fakeNames.sort(() => Math.random() - 0.5);
-        const opts = [shuffledFakes[0], shuffledFakes[1], shuffledFakes[2], nenhuma]
-          .sort(() => Math.random() - 0.5);
+        const opts = shuffleSafe([shuffledFakes[0], shuffledFakes[1], shuffledFakes[2], nenhuma], nenhuma);
 
         renderOpcoes(opts, nenhuma);
       }
+    }
+
+    // Fisher-Yates shuffle + garante que a resposta certa NÃO fique na 1ª posição
+    function shuffleSafe(arr, correct) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      // Se a resposta certa ficou na posição 0, troca com uma posição aleatória (1-3)
+      if (a[0] === correct) {
+        const swapIdx = 1 + Math.floor(Math.random() * (a.length - 1));
+        [a[0], a[swapIdx]] = [a[swapIdx], a[0]];
+      }
+      return a;
     }
 
     function renderOpcoes(opts, correct) {
