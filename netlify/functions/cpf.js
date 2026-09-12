@@ -1,5 +1,5 @@
 // Netlify Serverless Function — API de CPF
-// Valida CPF e retorna status. Não gera nomes falsos.
+// Consulta BrasilAPI para dados reais. SEM fallback de nomes gerados.
 
 // Validação matemática do CPF (dígitos verificadores)
 function isValidCPF(cpf) {
@@ -65,16 +65,42 @@ exports.handler = async function(event, context) {
       };
     }
 
-    // CPF válido matematicamente — retorna OK sem dados pessoais inventados
+    // Tenta BrasilAPI primeiro para dados reais
+    let result = null;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
+      const apiRes = await fetch(`https://brasilapi.com.br/api/cpf/v1/${cpf}`, {
+        headers: { "Accept": "application/json" },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (apiRes.ok) {
+        const apiData = await apiRes.json();
+        result = {
+          NOME: apiData.nome || apiData.name || "",
+          NOME_MAE: apiData.nome_mae || apiData.mother_name || "",
+          NASC: apiData.data_nascimento || apiData.birth_date || "",
+        };
+      }
+    } catch (_apiErr) {
+      // BrasilAPI falhou ou timeout — segue sem dados
+    }
+
+    // Se BrasilAPI não retornou, retorna campos vazios (SEM nomes falsos)
+    // O frontend vai pedir o nome manualmente
+    if (!result || !result.NOME) {
+      result = { NOME: "", NOME_MAE: "", NASC: "", valid: true };
+    }
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        NOME: "",
-        NOME_MAE: "",
-        NASC: "",
-        valid: true
-      })
+      body: JSON.stringify(result)
     };
   } catch (err) {
     console.error("[CPF] Error:", err);
