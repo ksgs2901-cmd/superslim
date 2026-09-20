@@ -470,29 +470,7 @@
       /* Pix em TELA CHEIA na página 9 (sobrescreve o popup centralizado) */
       #pix-modal{ padding:0 !important; background:#100d0a !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
       #pix-modal-card{ max-width:520px !important; width:100% !important; height:100dvh !important; max-height:100dvh !important; border-radius:0 !important; box-shadow:none !important; animation:none !important; }
-      .pix-video-top{ position:relative; }
-      .pix-video-top wistia-player{ width:100%; display:block; }
-      @keyframes pixUnmutePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
     </style>
-    <script>
-      /* injeta o VÍDEO Wistia no topo do modal de Pix — só na página 9 */
-      (function injectPixVideo() {
-        var card = document.getElementById('pix-modal-card');
-        if (!card) { return setTimeout(injectPixVideo, 120); }
-        if (card.querySelector('.pix-video-top')) return;
-        var v = document.createElement('div');
-        v.className = 'pix-video-top';
-        v.style.cssText = 'background:#100d0a;line-height:0;';
-        v.innerHTML = '<script src="https://fast.wistia.com/player.js" async><\/script>'
-          + '<script src="https://fast.wistia.com/embed/e6blhqkox8.js" async type="module"><\/script>'
-          + '<style>wistia-player[media-id=\'e6blhqkox8\']:not(:defined){background:center/contain no-repeat url(\'https://fast.wistia.com/embed/medias/e6blhqkox8/swatch\');display:block;filter:blur(5px);padding-top:55.94%;}<\/style>'
-          + '<wistia-player media-id="e6blhqkox8" aspect="1.7877094972067038" style="width:100%;"><\/wistia-player>';
-        // coloca o vídeo LOGO ABAIXO do header verde "Pagamento via Pix"
-        var hdr = card.firstElementChild;
-        if (hdr && hdr.nextSibling) { card.insertBefore(v, hdr.nextSibling); }
-        else { card.insertBefore(v, card.firstChild); }
-      })();
-    </script>
 
     <script defer="" src="v8c78df7c7c0f484497ecbca7046644da1771523124516-10" data-cf-beacon="{" version":"2024.11.0","token":"291788ee003a413395b0add202b81cef","r":1,"server_timing":{"name":{"cfcachestatus":true,"cfedge":true,"cfextpri":true,"cfl4":true,"cforigin":true,"cfspeedbrain":true},"location_startswith":null}}"="" crossorigin="anonymous"></script>
   <script src="js/front-boost.js" defer=""></script>
