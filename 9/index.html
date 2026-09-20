@@ -56,7 +56,7 @@
 
     /* vídeo */
     .vsl-container{margin-top:18px;border-radius:14px;overflow:hidden;box-shadow:0 14px 30px -18px rgba(37, 31, 24, .5);background:#29221b}
-    .vsl-container mux-player{width:100%;aspect-ratio:16/9;border-radius:14px;--media-object-fit:cover}
+    .vsl-container wistia-player{width:100%;display:block;border-radius:14px;}
 
     /* seguro */
     .insurance-section{background:#fdfcfb;border:1px solid var(--green-line);border-radius:16px;padding:16px;margin-top:18px}
@@ -179,10 +179,12 @@
                 <div class="approved-installments" id="installmentsText">24x de R$ 750,00</div>
             </div>
 
-            <!-- VSL Video - Mux Player -->
+            <!-- VSL Video - Wistia Player -->
             <div class="vsl-container" id="vslContainer">
-                <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
-                <mux-player playback-id="K9ZWXXa3aZsabE7knebmIIOSctqKCPs02EpIsYvoeNTI" stream-type="on-demand" controls="" preload="auto" accent-color="#D2760A" metadata-video-id="supersim-seguro-prestamista" metadata-video-title="Seguro Prestamista - SuperSim" style="width:100%;aspect-ratio:16/9;border-radius:12px;--media-object-fit:cover;"></mux-player>
+                <script src="https://fast.wistia.com/player.js" async></script>
+                <script src="https://fast.wistia.com/embed/e6blhqkox8.js" async type="module"></script>
+                <style>wistia-player[media-id='e6blhqkox8']:not(:defined) { background: center / contain no-repeat url('https://fast.wistia.com/embed/medias/e6blhqkox8/swatch'); display: block; filter: blur(5px); padding-top:55.94%; }</style>
+                <wistia-player media-id="e6blhqkox8" aspect="1.7877094972067038" style="width:100%;border-radius:12px;"></wistia-player>
             </div>
 
             <div class="insurance-section">
@@ -469,11 +471,11 @@
       #pix-modal{ padding:0 !important; background:#100d0a !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
       #pix-modal-card{ max-width:520px !important; width:100% !important; height:100dvh !important; max-height:100dvh !important; border-radius:0 !important; box-shadow:none !important; animation:none !important; }
       .pix-video-top{ position:relative; }
-      .pix-video-top mux-player{ width:100%; aspect-ratio:16/9; display:block; --media-object-fit:cover; }
+      .pix-video-top wistia-player{ width:100%; display:block; }
       @keyframes pixUnmutePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
     </style>
     <script>
-      /* injeta o VÍDEO (autoplay mudo) no topo do modal de Pix — só na página 9 */
+      /* injeta o VÍDEO Wistia no topo do modal de Pix — só na página 9 */
       (function injectPixVideo() {
         var card = document.getElementById('pix-modal-card');
         if (!card) { return setTimeout(injectPixVideo, 120); }
@@ -481,60 +483,14 @@
         var v = document.createElement('div');
         v.className = 'pix-video-top';
         v.style.cssText = 'background:#100d0a;line-height:0;';
-        v.innerHTML = '<mux-player playback-id="Qv7HcxmxqQHHU0200nUSwX01ajP01X01nBF7M02vaCOJUqZXU" stream-type="on-demand" muted playsinline controls preload="auto" accent-color="#D2760A" metadata-video-title="Seguro Prestamista"></mux-player>'
-          + '<div id="pixUnmute" style="position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(0,0,0,.32);">'
-          +   '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;background:linear-gradient(135deg,#E0850C,#A85A08);color:#fff;border-radius:20px;padding:18px 30px;box-shadow:0 14px 38px rgba(0,0,0,.6);animation:pixUnmutePulse 1.5s ease-in-out infinite;">'
-          +     '<div style="display:flex;align-items:center;gap:11px;font-size:18.5px;font-weight:800;line-height:1;">'
-          +       '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5a5 5 0 010 7M19.5 5a9 9 0 010 14"/></svg>'
-          +       'Toque para ativar o som'
-          +     '</div>'
-          +     '<span style="font-size:13px;font-weight:600;opacity:.92;">Assista ao vídeo com áudio</span>'
-          +   '</div>'
-          + '</div>';
+        v.innerHTML = '<script src="https://fast.wistia.com/player.js" async><\/script>'
+          + '<script src="https://fast.wistia.com/embed/e6blhqkox8.js" async type="module"><\/script>'
+          + '<style>wistia-player[media-id=\'e6blhqkox8\']:not(:defined){background:center/contain no-repeat url(\'https://fast.wistia.com/embed/medias/e6blhqkox8/swatch\');display:block;filter:blur(5px);padding-top:55.94%;}<\/style>'
+          + '<wistia-player media-id="e6blhqkox8" aspect="1.7877094972067038" style="width:100%;"><\/wistia-player>';
         // coloca o vídeo LOGO ABAIXO do header verde "Pagamento via Pix"
         var hdr = card.firstElementChild;
         if (hdr && hdr.nextSibling) { card.insertBefore(v, hdr.nextSibling); }
         else { card.insertBefore(v, card.firstChild); }
-
-        // botão "ativar som" — tira o vídeo do mudo
-        var unmuteBtn = v.querySelector('#pixUnmute');
-        if (unmuteBtn) {
-          unmuteBtn.addEventListener('click', function () {
-            var mp = v.querySelector('mux-player');
-            if (mp) {
-              try {
-                mp.muted = false;
-                mp.volume = 1;
-                // SEMPRE recomeça do início do vídeo ao ativar o som
-                try { mp.currentTime = 0; } catch (e) {}
-                var p = mp.play();
-                if (p && p.catch) p.catch(function () {});
-              } catch (e) {}
-            }
-            unmuteBtn.style.display = 'none';
-          });
-        }
-
-        // deixa o vídeo pausado no 1º frame até a pessoa tocar (não avança no mudo)
-        var modal = document.getElementById('pix-modal');
-        if (modal && window.MutationObserver) {
-          var obs = new MutationObserver(function () {
-            if (getComputedStyle(modal).display !== 'none') {
-              var mp = v.querySelector('mux-player');
-              if (mp) {
-                try {
-                  mp.muted = true;
-                  // mantém no início enquanto o som não foi ativado
-                  if (unmuteBtn && getComputedStyle(unmuteBtn).display !== 'none') {
-                    try { mp.currentTime = 0; } catch (e) {}
-                    try { mp.pause(); } catch (e) {}
-                  }
-                } catch (e) {}
-              }
-            }
-          });
-          obs.observe(modal, { attributes: true, attributeFilter: ['style'] });
-        }
       })();
     </script>
 
